@@ -1,5 +1,5 @@
 {
-  "name": "protografico",
+  "name": "protografico-plugin",
   "description": "LangGraph development accelerator - Architecture patterns, parallel module development, and data-driven optimization for building AI agents",
   "version": "0.0.8",
   "author": {
