@@ -1,4 +1,4 @@
-# LangGraph Master Plugin
+# ProtoGrafico Plugin
 
 **Build LangGraph agents faster. Optimize them systematically.**
 
