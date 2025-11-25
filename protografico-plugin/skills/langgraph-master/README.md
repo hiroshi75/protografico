@@ -6,7 +6,7 @@
 
 ```
 /plugin marketplace add hiroshi75/ccplugins
-/plugin install langgraph-master-plugin@hiroshi75
+/plugin install protografico-plugin@hiroshi75
 ```
 
 ## Automatic Triggers
@@ -32,45 +32,48 @@ Detect LangGraph context → Auto-invoke skill → Provide patterns/guidance →
 To manually trigger LangGraph guidance:
 
 ```
-/langgraph-master-plugin:langgraph-master
+/protografico-plugin:langgraph-master
 ```
 
 For learning specific patterns:
 
 ```
-/langgraph-master-plugin:langgraph-master "explain routing pattern"
+/protografico-plugin:langgraph-master "explain routing pattern"
 ```
 
 ## Learning Resources
 
 The skill provides comprehensive documentation covering:
 
-| Category | Topics | Files |
-|----------|--------|-------|
-| **Core Concepts** | State, Node, Edge fundamentals | 01_core_concepts_*.md |
-| **Architecture** | 6 major graph patterns (Routing, Agent, etc.) | 02_graph_architecture_*.md |
-| **Memory** | Checkpointer, Store, Persistence | 03_memory_management_*.md |
-| **Tools** | Tool definition, Command API, Tool Node | 04_tool_integration_*.md |
-| **Advanced** | Human-in-the-Loop, Streaming, Map-Reduce | 05_advanced_features_*.md |
-| **Models** | Gemini, Claude, OpenAI model IDs | 06_llm_model_ids*.md |
-| **Examples** | Chatbot, RAG agent implementations | example_*.md |
+| Category          | Topics                                        | Files                       |
+| ----------------- | --------------------------------------------- | --------------------------- |
+| **Core Concepts** | State, Node, Edge fundamentals                | 01*core_concepts*\*.md      |
+| **Architecture**  | 6 major graph patterns (Routing, Agent, etc.) | 02*graph_architecture*\*.md |
+| **Memory**        | Checkpointer, Store, Persistence              | 03*memory_management*\*.md  |
+| **Tools**         | Tool definition, Command API, Tool Node       | 04*tool_integration*\*.md   |
+| **Advanced**      | Human-in-the-Loop, Streaming, Map-Reduce      | 05*advanced_features*\*.md  |
+| **Models**        | Gemini, Claude, OpenAI model IDs              | 06_llm_model_ids\*.md       |
+| **Examples**      | Chatbot, RAG agent implementations            | example\_\*.md              |
 
 ## Subagent: langgraph-engineer
 
-The skill includes a specialized **langgraph-master-plugin:langgraph-engineer** subagent for efficient parallel development:
+The skill includes a specialized **protografico-plugin:langgraph-engineer** subagent for efficient parallel development:
 
 ### Key Features
+
 - **Functional Module Scope**: Implements complete features (2-5 nodes) as cohesive units
 - **Parallel Execution**: Multiple subagents can develop different modules simultaneously
 - **Production-Ready**: No TODOs or placeholders, fully functional code only
 - **Skill-Driven**: Always references langgraph-master documentation before implementation
 
 ### When to Use
+
 1. **Feature Module Implementation**: RAG search, intent analysis, approval workflows
 2. **Subgraph Patterns**: Complete functional units with nodes, edges, and state
 3. **Tool Integration**: Full tool integration modules with error handling
 
 ### Parallel Development Pattern
+
 ```
 Planner → Decompose into functional modules
   ├─ langgraph-engineer 1: Intent analysis module (parallel)
@@ -91,6 +94,7 @@ Orchestrator → Integrate modules into complete graph
 ## Example Use Cases
 
 ### Automatic Guidance
+
 ```python
 # Claude detects LangGraph usage and automatically provides guidance
 from langgraph.graph import StateGraph
@@ -101,6 +105,7 @@ class AgentState(TypedDict):
 ```
 
 ### Pattern Implementation
+
 ```
 User: "Build a RAG agent with LangGraph"
 Claude: [Auto-invokes skill]
@@ -110,6 +115,7 @@ Claude: [Auto-invokes skill]
 ```
 
 ### Subagent Delegation
+
 ```
 User: "Create a chatbot with intent classification and RAG search"
 Claude: → Decomposes into 2 modules

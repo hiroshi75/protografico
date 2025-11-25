@@ -99,10 +99,10 @@ Just start coding. Claude provides patterns automatically.
 
 ```bash
 # Prompt-level optimization (no structure changes)
-/langgraph-master-plugin:fine-tune
+/protografico-plugin:fine-tune
 
 # Architecture-level optimization (structure changes)
-/langgraph-master-plugin:arch-tune "Reduce latency by 30%"
+/protografico-plugin:arch-tune "Reduce latency by 30%"
 ```
 
 ### Build Modules in Parallel
