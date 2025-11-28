@@ -97,6 +97,84 @@ llm = ChatGoogleGenerativeAI(
 
 Image input and generation capabilities (see [Advanced Features](06_llm_model_ids_gemini_advanced.md) for details).
 
+## Grounding (Google Search)
+
+Grounding enables Gemini to access real-time information via Google Search, reducing hallucinations and providing verifiable sources.
+
+### Supported Models
+
+| Model | Google Search Grounding | Google Maps Grounding |
+| ----- | ----------------------- | --------------------- |
+| `google/gemini-3-pro` | ✅ | ❌ |
+| `google/gemini-2.5-pro` | ✅ | ✅ |
+| `gemini-2.5-flash` | ✅ | ✅ |
+| `gemini-2.5-flash-lite` | ✅ | ✅ |
+| `gemini-2.0-flash` | ✅ | - |
+| `gemini-2.0-flash-lite` | ❌ | - |
+
+### Basic Usage
+
+```python
+from google import genai
+from google.genai import types
+
+client = genai.Client()
+
+# Define grounding tool
+grounding_tool = types.Tool(
+    google_search=types.GoogleSearch()
+)
+
+config = types.GenerateContentConfig(
+    tools=[grounding_tool]
+)
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents="What are the latest AI news today?",
+    config=config,
+)
+
+print(response.text)
+```
+
+### Response Metadata
+
+Grounded responses include `groundingMetadata`:
+
+```python
+# Access grounding metadata
+metadata = response.candidates[0].grounding_metadata
+
+# Search queries used
+print(metadata.web_search_queries)
+
+# Source information
+for chunk in metadata.grounding_chunks:
+    print(f"Source: {chunk.web.title} - {chunk.web.uri}")
+
+# Text-to-source mappings (for inline citations)
+for support in metadata.grounding_supports:
+    print(f"Segment: {support.segment.text}")
+    print(f"Source indices: {support.grounding_chunk_indices}")
+```
+
+### Use Cases
+
+- **Real-time information**: Current events, stock prices, weather
+- **Fact verification**: Reduce hallucinations with verifiable sources
+- **Research assistance**: Provide citations and references
+
+### Pricing Notes
+
+- Billed per search query executed by the model
+- Multiple searches in one request = multiple billable uses
+- Model automatically determines when search improves the answer
+
+### Reference
+
+- [Grounding Documentation](https://ai.google.dev/gemini-api/docs/grounding)
+
 ## Important Notes
 
 - ❌ **Deprecated**: Gemini 1.0, 1.5 series are no longer available
