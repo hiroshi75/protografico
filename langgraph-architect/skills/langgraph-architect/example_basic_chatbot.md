@@ -2,49 +2,135 @@
 
 Implementation example of a basic chatbot using LangGraph.
 
-## Complete Code
+## Recommended Directory Structure
+
+```
+basic_chatbot/
+├── pyproject.toml
+├── .env                    # ANTHROPIC_API_KEY
+├── src/
+│   └── basic_chatbot/
+│       ├── __init__.py
+│       ├── main.py         # Entry point
+│       ├── graph.py        # Graph construction
+│       ├── nodes.py        # Node functions
+│       └── config.py       # LLM configuration
+└── tests/
+    └── test_graph.py
+```
+
+## Modular Code
+
+### config.py
 
 ```python
-from typing import Annotated
+"""LLM configuration"""
+import os
+from dotenv import load_dotenv
+from langchain_anthropic import ChatAnthropic
+
+load_dotenv()
+
+LLM = ChatAnthropic(
+    model="claude-sonnet-4-5-20250929",
+    api_key=os.getenv("ANTHROPIC_API_KEY")
+)
+```
+
+### nodes.py
+
+```python
+"""Node functions"""
+from langgraph.graph import MessagesState
+from .config import LLM
+
+def chatbot_node(state: MessagesState) -> dict:
+    """Chatbot node"""
+    response = LLM.invoke(state["messages"])
+    return {"messages": [response]}
+```
+
+### graph.py
+
+```python
+"""Graph construction"""
 from langgraph.graph import StateGraph, START, END, MessagesState
-from langgraph.graph.message import add_messages
+from langgraph.checkpoint.memory import MemorySaver
+
+from .nodes import chatbot_node
+
+def create_graph():
+    """Build and compile the graph"""
+    builder = StateGraph(MessagesState)
+    builder.add_node("chatbot", chatbot_node)
+    builder.add_edge(START, "chatbot")
+    builder.add_edge("chatbot", END)
+
+    checkpointer = MemorySaver()
+    return builder.compile(checkpointer=checkpointer)
+
+graph = create_graph()
+```
+
+### main.py
+
+```python
+"""Entry point"""
+from .graph import graph
+
+def main():
+    config = {"configurable": {"thread_id": "conversation-1"}}
+
+    while True:
+        user_input = input("User: ")
+        if user_input.lower() in ["quit", "exit", "q"]:
+            break
+
+        for chunk in graph.stream(
+            {"messages": [{"role": "user", "content": user_input}]},
+            config,
+            stream_mode="values"
+        ):
+            chunk["messages"][-1].pretty_print()
+
+if __name__ == "__main__":
+    main()
+```
+
+## Single File Version (for learning)
+
+```python
+"""Single file version - for learning purposes only"""
+from langgraph.graph import StateGraph, START, END, MessagesState
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_anthropic import ChatAnthropic
 
-# 1. Initialize LLM
 llm = ChatAnthropic(model="claude-sonnet-4-5-20250929")
 
-# 2. Define node
 def chatbot_node(state: MessagesState):
-    """Chatbot node"""
     response = llm.invoke(state["messages"])
     return {"messages": [response]}
 
-# 3. Build graph
 builder = StateGraph(MessagesState)
 builder.add_node("chatbot", chatbot_node)
 builder.add_edge(START, "chatbot")
 builder.add_edge("chatbot", END)
 
-# 4. Compile with checkpointer
 checkpointer = MemorySaver()
 graph = builder.compile(checkpointer=checkpointer)
 
-# 5. Execute
-config = {"configurable": {"thread_id": "conversation-1"}}
-
-while True:
-    user_input = input("User: ")
-    if user_input.lower() in ["quit", "exit", "q"]:
-        break
-
-    # Send message
-    for chunk in graph.stream(
-        {"messages": [{"role": "user", "content": user_input}]},
-        config,
-        stream_mode="values"
-    ):
-        chunk["messages"][-1].pretty_print()
+if __name__ == "__main__":
+    config = {"configurable": {"thread_id": "conversation-1"}}
+    while True:
+        user_input = input("User: ")
+        if user_input.lower() in ["quit", "exit", "q"]:
+            break
+        for chunk in graph.stream(
+            {"messages": [{"role": "user", "content": user_input}]},
+            config,
+            stream_mode="values"
+        ):
+            chunk["messages"][-1].pretty_print()
 ```
 
 ## Explanation

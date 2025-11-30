@@ -64,6 +64,15 @@ Model ID reference for major LLM providers. Always refer to this document when s
 - OpenAI GPT model list
 - Usage examples and best practices with LangGraph
 
+### [07. Project Structure](07_project_structure.md)
+
+Recommended directory structure and file organization for LangGraph applications. **main.pyに全てを書かない**。
+
+- Directory structure patterns (simple / medium / large)
+- File separation guidelines (state.py, nodes.py, tools/, graph.py, main.py)
+- Import patterns and __init__.py setup
+- Anti-patterns to avoid
+
 ### Implementation Examples
 
 Practical agent implementation examples

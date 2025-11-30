@@ -2,17 +2,52 @@
 
 Implementation example of a RAG (Retrieval-Augmented Generation) agent with search functionality.
 
-## Complete Code
+## Recommended Directory Structure
+
+```
+rag_agent/
+├── pyproject.toml
+├── .env                    # ANTHROPIC_API_KEY
+├── src/
+│   └── rag_agent/
+│       ├── __init__.py
+│       ├── main.py         # Entry point
+│       ├── graph.py        # Graph construction
+│       ├── nodes.py        # Node functions
+│       ├── edges.py        # Conditional edge functions
+│       ├── config.py       # LLM configuration
+│       └── tools/
+│           ├── __init__.py
+│           └── search.py   # Search tools
+└── tests/
+    ├── test_tools.py
+    └── test_graph.py
+```
+
+## Modular Code
+
+### config.py
 
 ```python
-from typing import Annotated, Literal
-from langgraph.graph import StateGraph, START, END, MessagesState
-from langgraph.prebuilt import ToolNode
-from langgraph.checkpoint.memory import MemorySaver
+"""LLM configuration"""
+import os
+from dotenv import load_dotenv
 from langchain_anthropic import ChatAnthropic
+
+load_dotenv()
+
+LLM = ChatAnthropic(
+    model="claude-sonnet-4-5-20250929",
+    api_key=os.getenv("ANTHROPIC_API_KEY")
+)
+```
+
+### tools/search.py
+
+```python
+"""Search tools"""
 from langchain_core.tools import tool
 
-# 1. Define tool
 @tool
 def retrieve_documents(query: str) -> str:
     """Retrieve relevant documents.
@@ -21,67 +56,154 @@ def retrieve_documents(query: str) -> str:
         query: Search query
     """
     # In practice, search with vector store, etc.
-    # Using dummy data here
     docs = [
         "LangGraph is an agent framework.",
         "StateGraph manages state.",
         "You can extend agents with tools."
     ]
-
     return "\n".join(docs)
+```
 
-tools = [retrieve_documents]
+### tools/__init__.py
 
-# 2. Bind tools to LLM
-llm = ChatAnthropic(model="claude-sonnet-4-5-20250929")
-llm_with_tools = llm.bind_tools(tools)
+```python
+"""Tool exports"""
+from .search import retrieve_documents
 
-# 3. Define nodes
-def agent_node(state: MessagesState):
+ALL_TOOLS = [retrieve_documents]
+```
+
+### nodes.py
+
+```python
+"""Node functions"""
+from langgraph.graph import MessagesState
+from .config import LLM
+from .tools import ALL_TOOLS
+
+llm_with_tools = LLM.bind_tools(ALL_TOOLS)
+
+def agent_node(state: MessagesState) -> dict:
     """Agent node"""
     response = llm_with_tools.invoke(state["messages"])
     return {"messages": [response]}
+```
+
+### edges.py
+
+```python
+"""Conditional edge functions"""
+from typing import Literal
+from langgraph.graph import MessagesState
 
 def should_continue(state: MessagesState) -> Literal["tools", "end"]:
     """Determine tool usage"""
     last_message = state["messages"][-1]
-
     if last_message.tool_calls:
         return "tools"
     return "end"
+```
 
-# 4. Build graph
+### graph.py
+
+```python
+"""Graph construction"""
+from langgraph.graph import StateGraph, START, END, MessagesState
+from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.memory import MemorySaver
+
+from .nodes import agent_node
+from .edges import should_continue
+from .tools import ALL_TOOLS
+
+def create_graph():
+    """Build and compile the graph"""
+    builder = StateGraph(MessagesState)
+
+    # Add nodes
+    builder.add_node("agent", agent_node)
+    builder.add_node("tools", ToolNode(ALL_TOOLS))
+
+    # Add edges
+    builder.add_edge(START, "agent")
+    builder.add_conditional_edges(
+        "agent",
+        should_continue,
+        {"tools": "tools", "end": END}
+    )
+    builder.add_edge("tools", "agent")
+
+    # Compile
+    checkpointer = MemorySaver()
+    return builder.compile(checkpointer=checkpointer)
+
+graph = create_graph()
+```
+
+### main.py
+
+```python
+"""Entry point"""
+from .graph import graph
+
+def main():
+    config = {"configurable": {"thread_id": "rag-session-1"}}
+
+    query = "What is LangGraph?"
+
+    for chunk in graph.stream(
+        {"messages": [{"role": "user", "content": query}]},
+        config,
+        stream_mode="values"
+    ):
+        chunk["messages"][-1].pretty_print()
+
+if __name__ == "__main__":
+    main()
+```
+
+## Single File Version (for learning)
+
+```python
+"""Single file version - for learning purposes only"""
+from typing import Literal
+from langgraph.graph import StateGraph, START, END, MessagesState
+from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.memory import MemorySaver
+from langchain_anthropic import ChatAnthropic
+from langchain_core.tools import tool
+
+@tool
+def retrieve_documents(query: str) -> str:
+    """Retrieve relevant documents."""
+    docs = [
+        "LangGraph is an agent framework.",
+        "StateGraph manages state.",
+        "You can extend agents with tools."
+    ]
+    return "\n".join(docs)
+
+tools = [retrieve_documents]
+llm = ChatAnthropic(model="claude-sonnet-4-5-20250929")
+llm_with_tools = llm.bind_tools(tools)
+
+def agent_node(state: MessagesState):
+    response = llm_with_tools.invoke(state["messages"])
+    return {"messages": [response]}
+
+def should_continue(state: MessagesState) -> Literal["tools", "end"]:
+    if state["messages"][-1].tool_calls:
+        return "tools"
+    return "end"
+
 builder = StateGraph(MessagesState)
-
 builder.add_node("agent", agent_node)
 builder.add_node("tools", ToolNode(tools))
-
 builder.add_edge(START, "agent")
-builder.add_conditional_edges(
-    "agent",
-    should_continue,
-    {
-        "tools": "tools",
-        "end": END
-    }
-)
+builder.add_conditional_edges("agent", should_continue, {"tools": "tools", "end": END})
 builder.add_edge("tools", "agent")
 
-# 5. Compile
-checkpointer = MemorySaver()
-graph = builder.compile(checkpointer=checkpointer)
-
-# 6. Execute
-config = {"configurable": {"thread_id": "rag-session-1"}}
-
-query = "What is LangGraph?"
-
-for chunk in graph.stream(
-    {"messages": [{"role": "user", "content": query}]},
-    config,
-    stream_mode="values"
-):
-    chunk["messages"][-1].pretty_print()
+graph = builder.compile(checkpointer=MemorySaver())
 ```
 
 ## Execution Flow
